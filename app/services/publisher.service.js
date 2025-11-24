@@ -1,5 +1,6 @@
 // app/services/publisher.service.js
 const { ObjectId } = require("mongodb");
+console.log("========= FILE SERVICE DA DUOC LOAD PHIEN BAN MOI NHAT 123 ========="); // <--- THÊM DÒNG NÀY
 
 class PublisherService {
   constructor(db) {
@@ -28,12 +29,24 @@ class PublisherService {
   }
 
   async update(id, payload) {
-    const result = await this.collection.findOneAndUpdate(
-      { _id: new ObjectId(id) },
-      { $set: { name: payload.name, address: payload.address } },
-      { returnDocument: "after" }
-    );
-    return result.value;
+   const filter = { _id: new ObjectId(id) };
+   const $set = {};
+if (payload.code !== undefined)   $set.code = payload.code;
+if (payload.name !== undefined)  $set.name = payload.name;
+if (payload.address !== undefined)   $set.address = payload.address;
+// nếu không có gì để set thì trả luôn bản ghi hiện tại
+if (Object.keys($set).length === 0) {
+  return this.findById(id);
+}
+// debug (tạm)
+// console.log("BOOK UPDATE filter:", filter, "$set:", $set);
+const r = await this.collection.updateOne(filter, { $set });
+if (r.matchedCount === 0) return null;        // => 404
+// trả lại bản ghi sau update
+   
+   
+   return this.findById(id);
+   
   }
 
   delete(id) {

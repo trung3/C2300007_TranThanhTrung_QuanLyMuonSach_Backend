@@ -24,6 +24,8 @@ class BookService {
       qty: Number(payload.qty ?? 0),
       publisherId: payload.publisherId ? new ObjectId(payload.publisherId) : null,
       language: payload.language ?? "vi",
+      yearOfPublication: payload.yearOfPublication ?? "",
+      image: payload.image ?? "",           // ✅ thêm cột hình (URL)
       createdAt: new Date(),
     };
     const { insertedId } = await this.collection.insertOne(doc);
@@ -41,7 +43,8 @@ async update(id, payload) {
   if (payload.publisherId !== undefined) $set.publisherId =
       payload.publisherId ? new ObjectId(payload.publisherId) : null;
   if (payload.language !== undefined) $set.language = payload.language;
-
+  if (payload.yearOfPublication !== undefined) $set.yearOfPublication = payload.yearOfPublication;
+  if( payload.image !== undefined)    $set.image = payload.image;
   // nếu không có gì để set thì trả luôn bản ghi hiện tại
   if (Object.keys($set).length === 0) {
     return this.findById(id);
@@ -54,27 +57,7 @@ async update(id, payload) {
   if (r.matchedCount === 0) return null;        // => 404
   // trả lại bản ghi sau update
   return this.findById(id);
-}
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-
-  
-  
-  
-  
-  
-  
-  
-
+}                                    
   delete(id) {
     return this.collection.deleteOne({ _id: new ObjectId(id) });
   }

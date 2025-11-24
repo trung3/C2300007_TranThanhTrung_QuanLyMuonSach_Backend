@@ -44,21 +44,16 @@ exports.findOne = async (req, res, next) => {
     next(new ApiError(400, "ID không hợp lệ"));
   }
 };
-
-
 exports.update = async (req, res, next) => {
   try {
     const id = req.params.id;
     if (!ObjectId.isValid(id)) {
       return next(new ApiError(400, "ID không hợp lệ"));
     }
-
-    console.log("PATCH /api/books/:id", id, "body:", req.body);
-
+    
     await getClient();
     const service = new BookService(getDb());
     const updated = await service.update(id, req.body);
-
     if (!updated) {
       console.log("Không tìm thấy theo _id:", id);
       return next(new ApiError(404, "Không tìm thấy sách"));

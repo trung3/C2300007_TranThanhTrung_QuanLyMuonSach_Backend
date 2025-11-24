@@ -1,4 +1,5 @@
 // app/controllers/publisher.controller.js
+const { ObjectId } = require("mongodb");
 const ApiError = require("../api-error");
 const { getClient, getDb } = require("../../utils/mongodb.util");
 const PublisherService = require("../services/publisher.service");
@@ -42,11 +43,19 @@ exports.findOne = async (req, res, next) => {
 
 exports.update = async (req, res, next) => {
   try {
-    await getClient();
-    const service = new PublisherService(getDb());
-    const updated = await service.update(req.params.id, req.body);
-    if (!updated) return next(new ApiError(404, "Không tìm thấy NXB"));
-    res.json(updated);
+    const id = req.params.id;
+    if (!ObjectId.isValid(id)) {
+  return next(new ApiError(400, "ID không hợp lệ"));
+}
+
+await getClient();
+const service = new PublisherService(getDb());
+const updated = await service.update(id, req.body);
+if (!updated) {
+  console.log("Không tìm thấy theo _id:", id);
+  return next(new ApiError(404, "Không tìm thấy NXB"));
+}
+res.json(updated);
   } catch (e) {
     next(new ApiError(400, e.message || "Cập nhật thất bại"));
   }
