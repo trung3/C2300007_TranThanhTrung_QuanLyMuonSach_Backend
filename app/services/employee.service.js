@@ -9,9 +9,21 @@ class EmployeeService {
 
   findByCode(code) { return this.col.findOne({ code }); }
 
-  async create({ code, fullName, password, role = "staff" }) {
+  // 1. Thêm phone và address vào tham số nhận vào (cho phép nhận giá trị rỗng nếu không có)
+  async create({ code, fullName, password, role = "staff", phone = "", address = "" }) {
     const passwordHash = await bcrypt.hash(password, 10);
-    const doc = { code, fullName, passwordHash, role, createdAt: new Date() };
+    
+    // 2. Thêm phone và address vào object doc để lưu xuống DB
+    const doc = { 
+        code, 
+        fullName, 
+        passwordHash, 
+        role, 
+        phone,   // <--- Thêm dòng này
+        address, // <--- Thêm dòng này
+        createdAt: new Date() 
+    };
+    
     const { insertedId } = await this.col.insertOne(doc);
     return this.col.findOne({ _id: insertedId }, { projection: { passwordHash: 0 } });
   }

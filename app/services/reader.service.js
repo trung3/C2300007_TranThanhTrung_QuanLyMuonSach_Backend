@@ -1,5 +1,6 @@
 // app/services/reader.service.js
 const { ObjectId } = require("mongodb");
+const bcrypt = require("bcryptjs");
 
 class ReaderService {
   constructor(db) {
@@ -16,18 +17,32 @@ class ReaderService {
     return this.collection.findOne({ _id: new ObjectId(id) });
   }
 
+  findByCode(code) {
+    return this.collection.findOne({ code:code });
+  }
   async create(payload) {
+    // Mã hóa mật khẩu trước khi lưu
+    // Nếu payload có password thì hash, không có thì để rỗng
+    const passwordHash = payload.password ? await bcrypt.hash(payload.password, 10) : "";
+
     const doc = {
-      code: payload.code,                  // unique, bắt buộc
-      fullName: payload.fullName,          // bắt buộc
-      gender: Number(payload.gender ?? 1), // 0 | 1 (0 = nữ, 1 = nam)
-      dob: payload.dob ? new Date(payload.dob) : null,  // "YYYY-MM-DD"
+      code: payload.code,
+      fullName: payload.fullName,
+      gender: Number(payload.gender ?? 1),
+      dob: payload.dob ? new Date(payload.dob) : null,
       address: payload.address ?? "",
       phone: payload.phone ?? "",
+      
+      // 👇 QUAN TRỌNG: Lưu mật khẩu đã mã hóa vào đây
+      passwordHash: passwordHash, 
+      
       createdAt: new Date(),
     };
+
     const { insertedId } = await this.collection.insertOne(doc);
-    return this.findById(insertedId);
+    
+    // Trả về kết quả (nhưng ẩn mật khẩu đi cho bảo mật)
+    return this.collection.findOne({ _id: insertedId }, { projection: { passwordHash: 0 } });
   }
 
   async update(id, payload) {
