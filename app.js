@@ -27,7 +27,7 @@ app.get("/", (req, res) => {
 app.use("/api/publishers", publisherRouter);
 app.use("/api/books", bookRouter);
 const uploadRouter = require("./app/routes/upload.route");
-
+app.use("/api/uploads", uploadRouter);
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use("/api/readers", readerRouter);
 app.use("/api/employees", employeeRouter);
