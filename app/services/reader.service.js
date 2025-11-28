@@ -53,6 +53,9 @@ class ReaderService {
     if (payload.address !== undefined)  $set.address = payload.address;
     if (payload.phone !== undefined)    $set.phone = payload.phone;
 
+    if (payload.passwordHash !== undefined) {
+        $set.passwordHash = payload.passwordHash;
+    }
     if (Object.keys($set).length === 0) return this.findById(id);
 
     const r = await this.collection.updateOne(
