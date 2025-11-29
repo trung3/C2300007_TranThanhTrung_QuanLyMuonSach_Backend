@@ -64,7 +64,7 @@ async borrow({ bookId, readerId, employeeId, borrowDate }) {
     }
 
     // B. Kiểm tra số lượng (Quota)
-    const MAX_BOOKS = 5; // Giới hạn 3 cuốn
+    const MAX_BOOKS = 5; // Giới hạn 5 cuốn
     const currentCount = await this.loans.countDocuments({
         readerId: _readerId,
         status: "borrowing"
@@ -95,7 +95,7 @@ async borrow({ bookId, readerId, employeeId, borrowDate }) {
         createdBy: _employeeId,
         borrowDate: borrowDate ? new Date(borrowDate) : new Date(),
         returnDate: null,
-        status: "borrowing", // <--- Ghi đúng status này vào DB
+        status: "pending", // <--- Ghi đúng status này vào DB
         createdAt: new Date(),
     };
 
@@ -183,6 +183,129 @@ async borrow({ bookId, readerId, employeeId, borrowDate }) {
       ])
       .toArray();
   }
+  
+ 
+    // Hàm delete (bổ sung nếu chưa có)
+    // 👇 2. CẬP NHẬT HÀM DELETE (HỦY PHIẾU + TRẢ LẠI SỐ LƯỢNG)
+    async delete(id) {
+        const filter = {
+            _id: ObjectId.isValid(id) ? new ObjectId(id) : null,
+        };
+
+        if (!filter._id) return false;
+
+        // BƯỚC 1: Tìm thông tin phiếu mượn trước khi xóa (để lấy bookId)
+        const loan = await this.loans.findOne(filter);
+        
+        // Nếu không tìm thấy phiếu thì dừng
+        if (!loan) return false;
+
+        // BƯỚC 2: Trả lại số lượng sách (Cộng thêm 1)
+        if (loan.bookId) {
+            // Chuyển đổi bookId sang ObjectId nếu cần
+            const bookId = ObjectId.isValid(loan.bookId) ? new ObjectId(loan.bookId) : null;
+            
+            if (bookId) {
+                await this.books.updateOne(
+                    { _id: bookId },
+                    { $inc: { qty: 1 } } // $inc là lệnh tăng giá trị
+                );
+            }
+        }
+
+        // BƯỚC 3: Tiến hành xóa phiếu mượn
+        const result = await this.loans.deleteOne(filter);
+
+        return result.deletedCount > 0;
+    }
+    
+    async findByReaderId(readerId) {
+        return await this.loans.aggregate([
+            {
+                $match: { 
+                    // Lưu ý: Trong Database bạn lưu là 'readerId' hay 'userId'?
+                    // Dựa vào code hàm borrow cũ của bạn, bạn dùng 'readerId'.
+                    readerId: new ObjectId(readerId) 
+                }
+            },
+            {
+                $lookup: {
+                    from: "books",          // Tên collection SÁCH trong MongoDB
+                    localField: "bookId",   // Tên trường ID sách trong collection LOANS
+                    foreignField: "_id",    // Tên trường ID trong collection BOOKS
+                    as: "bookDetails"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$bookDetails",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $addFields: {
+                    // Gán đè bookId bằng thông tin chi tiết để Frontend đọc được
+                    bookId: "$bookDetails"
+                }
+            },
+            {
+                $project: {
+                    bookDetails: 0 // Xóa trường thừa
+                }
+            },
+            {
+                $sort: { borrowDate: -1 } // Sắp xếp mới nhất lên đầu
+            }
+        ]).toArray();
+    }
+    async update(id, payload) {
+        const filter = {
+            _id: ObjectId.isValid(id) ? new ObjectId(id) : null,
+        };
+        const currentLoan = await this.loans.findOne(filter);
+        if (!currentLoan) return false;
+        // Tạo dữ liệu để update
+        const updateData = {
+            $set: {
+                status: payload.status, // Cập nhật trạng thái (pending -> borrowing -> returned)
+            }
+        };
+        // 2. LOGIC TRẢ SỐ LƯỢNG (Chỉ Backend mới được làm việc này)
+    if (payload.status === 'returned') {
+        updateData.$set.returnDate = new Date(); // Gán ngày trả
+
+        // Kiểm tra: Nếu trước đó chưa trả thì mới cộng số lượng
+        if (currentLoan.status !== 'returned' && currentLoan.bookId) {
+            const bookId = ObjectId.isValid(currentLoan.bookId) 
+                            ? new ObjectId(currentLoan.bookId) 
+                            : currentLoan.bookId;
+            
+            // 👇 LỆNH QUAN TRỌNG NHẤT: Tăng quantity trong bảng books lên 1
+            await this.books.updateOne(
+                { _id: bookId },
+                { $inc: { qty: 1 } } 
+            );
+        }
+    }
+
+        // LOGIC TỰ ĐỘNG:
+        // Nếu chuyển sang trạng thái "returned" (Đã trả) -> Tự động điền ngày trả thực tế là hôm nay
+        if (payload.status === 'returned') {
+            updateData.$set.returnDate = new Date(); // Lưu ngày giờ hiện tại
+        }
+        
+        // Nếu chuyển sang "borrowing" (Duyệt) -> Có thể update lại ngày mượn nếu muốn (tùy chọn)
+        // if (payload.status === 'borrowing') { updateData.$set.borrowDate = new Date(); }
+
+        const result = await this.loans.findOneAndUpdate(
+            filter,
+            updateData,
+            { returnDocument: "after" } // Trả về document mới sau khi sửa
+        );
+
+        return result; 
+    }
 }
+
 
 module.exports = LoanService;
