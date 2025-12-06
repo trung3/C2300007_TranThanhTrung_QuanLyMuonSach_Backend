@@ -1,17 +1,15 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const ApiError = require("../api-error");
-// 👇 Kiểm tra lại đường dẫn import này có đúng với cấu trúc thư mục của bạn không
 const { getClient, getDb } = require("../../utils/mongodb.util"); 
 const EmployeeService = require("../services/employee.service");
 const ReaderService = require("../services/reader.service");
 
-const JWT_SECRET = "dev-secret"; // Hoặc process.env.JWT_SECRET
+const JWT_SECRET = "dev-secret";
 const JWT_EXPIRES = "7d";
 
-// 1. Đăng ký (Giữ nguyên hoặc thêm logic của bạn)
+// 1. Đăng ký
 exports.register = async (req, res, next) => {
-    // Code đăng ký của bạn ở đây...
     res.json({ message: "Register handler" });
 };
 
@@ -88,9 +86,7 @@ exports.me = async (req, res, next) => {
     }
 };
 
-// 👇 4. CẬP NHẬT HỒ SƠ (Hàm này bạn đang thiếu nên bị lỗi)
-// Nhớ import dòng này ở đầu file nếu chưa có
-
+// 4. CẬP NHẬT HỒ SƠ (Hàm này bạn đang thiếu nên bị lỗi)
 
 exports.updateProfile = async (req, res, next) => {
     try {
@@ -110,13 +106,10 @@ exports.updateProfile = async (req, res, next) => {
         if (dob && dob.trim() !== "") updateData.dob = dob;
         if (gender !== undefined && gender !== null) updateData.gender = gender;
 
-        // 👇👇👇 DÁN ĐOẠN ĐÓ VÀO ĐÂY 👇👇👇
         if (password && password.trim() !== "") {
             const salt = await bcrypt.genSalt(10);
-            // Lưu ý: Tên biến phải là 'passwordHash' để khớp với Service
             updateData.passwordHash = await bcrypt.hash(password, salt); 
         }
-        // 👆👆👆 KẾT THÚC ĐOẠN DÁN 👆👆👆
 
         let updatedUser = null;
         

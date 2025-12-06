@@ -27,11 +27,7 @@ class LoanService {
     });
   }
 
-  // ============================
-  //          MƯỢN SÁCH
-  // ============================
-  // ✅ HÀM FIX LỖI: Chuyển đổi toàn bộ ObjectId trong tài liệu sang chuỗi JSON an toàn
-// Đảm bảo import ObjectId ở đầu file
+ 
 
 async borrow({ bookId, readerId, employeeId, borrowDate }) {
     console.log(`\n--- 🔍 BẮT ĐẦU KIỂM TRA MƯỢN [${bookId}] ---`);
@@ -47,44 +43,50 @@ async borrow({ bookId, readerId, employeeId, borrowDate }) {
     const reader = await this.readers.findOne({ _id: _readerId });
     if (!reader) throw new Error("Không tìm thấy độc giả");
 
-    // --- LOGIC CHẶN MỚI (Dùng status: "borrowing") ---
+    // --- LOGIC CHẶN MỚI ---
 
-    // A. Kiểm tra trùng (User đang mượn cuốn này chưa trả)
+    // A. Kiểm tra trùng: Đã mượn (borrowing) HOẶC Đang chờ duyệt (pending)
+    // 👉 SỬA Ở ĐÂY: Dùng $in để check nhiều trạng thái
     const duplicate = await this.loans.findOne({
         readerId: _readerId,
         bookId: _bookId,
-        status: "borrowing" // <--- ĐÚNG VỚI CSDL CỦA BẠN
+        status: { $in: ["borrowing", "pending"] } 
     });
 
     if (duplicate) {
-        console.log("❌ CHẶN: Phát hiện đang mượn trùng cuốn này!");
-        throw new Error(`Bạn đang mượn cuốn "${book.title}" (chưa trả).`);
+        // Thông báo lỗi chi tiết hơn
+        if(duplicate.status === 'pending') {
+            throw new Error(`Bạn đã gửi yêu cầu mượn cuốn "${book.title}" rồi, vui lòng chờ duyệt.`);
+        } else {
+            throw new Error(`Bạn đang giữ cuốn "${book.title}" (chưa trả), không thể mượn thêm.`);
+        }
     } else {
         console.log("✅ Check trùng: OK (Chưa giữ cuốn này)");
     }
 
-    // B. Kiểm tra số lượng (Quota)
-    const MAX_BOOKS = 5; // Giới hạn 5 cuốn
+    // B. Kiểm tra số lượng (Quota): Tính tổng cả sách đang giữ và đang chờ
+    const MAX_BOOKS = 5; 
     const currentCount = await this.loans.countDocuments({
         readerId: _readerId,
-        status: "borrowing"
+        status: { $in: ["borrowing", "pending"] } // 👉 SỬA Ở ĐÂY: Tính cả sách đang pending vào giới hạn
     });
 
-    console.log(`ℹ️ Đang giữ: ${currentCount} cuốn | Giới hạn: ${MAX_BOOKS}`);
+    console.log(`ℹ️ Đang giữ/chờ: ${currentCount} cuốn | Giới hạn: ${MAX_BOOKS}`);
 
     if (currentCount >= MAX_BOOKS) {
-        console.log("❌ CHẶN: Quá số lượng cho phép!");
-        throw new Error(`Bạn chỉ được mượn tối đa ${MAX_BOOKS} cuốn. Bạn đang giữ ${currentCount} cuốn.`);
+        throw new Error(`Bạn chỉ được mượn tối đa ${MAX_BOOKS} cuốn. Bạn đang có ${currentCount} yêu cầu (bao gồm đang mượn và chờ duyệt).`);
     }
 
     // --- HẾT LOGIC CHẶN ---
 
-    // 2. Kiểm tra kho
+    // 2. Kiểm tra kho (Giữ nguyên)
+    // Lưu ý: Logic này chỉ tính sách ĐANG MƯỢN, nếu muốn chặt chẽ hơn
+    // bạn cũng nên trừ đi số lượng đang nằm trong các phiếu pending.
+    // Tuy nhiên, logic cơ bản dưới đây vẫn ổn.
     const borrowedCount = await this.currentBorrowedCount(_bookId);
     const qty = Number(book.qty ?? 0);
     
     if (borrowedCount >= qty) {
-        console.log("❌ CHẶN: Hết sách trong kho!");
         throw new Error("Sách đã hết hàng.");
     }
 
@@ -95,15 +97,16 @@ async borrow({ bookId, readerId, employeeId, borrowDate }) {
         createdBy: _employeeId,
         borrowDate: borrowDate ? new Date(borrowDate) : new Date(),
         returnDate: null,
-        status: "pending", // <--- Ghi đúng status này vào DB
+        status: "pending", 
         createdAt: new Date(),
     };
 
     const result = await this.loans.insertOne(loanDoc);
-    // 👇 THÊM ĐOẠN NÀY ĐỂ TRỪ SỐ LƯỢNG 👇
+  
+    // Cập nhật kho (Trừ số lượng)
     await this.books.updateOne(
         { _id: _bookId },
-        { $inc: { qty: -1 } } // $inc -1 nghĩa là giảm qty đi 1 đơn vị
+        { $inc: { qty: -1 } } 
     );
     console.log("✅ TẠO PHIẾU MƯỢN THÀNH CÔNG:", result.insertedId);
     
@@ -119,7 +122,7 @@ async borrow({ bookId, readerId, employeeId, borrowDate }) {
       { $set: { status: "returned", returnDate: new Date() } },
       { returnDocument: "after" }
     );
-    // 👇 THÊM ĐOẠN NÀY ĐỂ CỘNG SỐ LƯỢNG LẠI 👇
+  
     if (updateResult) { // Nếu cập nhật phiếu thành công
         await this.books.updateOne(
             { _id: loan.bookId }, // Lấy ID sách từ phiếu mượn
@@ -185,8 +188,8 @@ async borrow({ bookId, readerId, employeeId, borrowDate }) {
   }
   
  
-    // Hàm delete (bổ sung nếu chưa có)
-    // 👇 2. CẬP NHẬT HÀM DELETE (HỦY PHIẾU + TRẢ LẠI SỐ LƯỢNG)
+ 
+    // 2. HÀM DELETE (HỦY PHIẾU + TRẢ LẠI SỐ LƯỢNG)
     async delete(id) {
         const filter = {
             _id: ObjectId.isValid(id) ? new ObjectId(id) : null,

@@ -45,10 +45,7 @@ exports.returnBook = async (req, res, next) => {
     const service = new LoanService(getDb());
     const doc = await service.returnLoan(id);
     
-    // SỬA: Thay 404 bằng 400 cho lỗi nghiệp vụ
-    // if (!doc) {
-    //   return next(new ApiError(400, "Phiếu mượn không tồn tại hoặc đã trả")); 
-    // }
+   
     
     res.json(doc);
   } catch (e) {
@@ -69,39 +66,31 @@ exports.listAll = async (_req, res, next) => {
   }
 };
 
-// 👇 CHỈ CODE THÊM HÀM NÀY VÀO CUỐI FILE 👇
-// Trong file app/controllers/loan.controller.js
 
 exports.getHistoryByUserId = async (req, res, next) => {
     try {
         const { userId } = req.params;
         
-        // --- LOG DEBUG 1: Kiểm tra xem ID nhận được là gì ---
-        console.log("1. Controller nhận UserId:", userId);
+       
 
         // Kiểm tra tính hợp lệ của ID
         if (!userId || !ObjectId.isValid(userId)) {
-            console.log("❌ ID không hợp lệ");
+            console.log("ID không hợp lệ");
             return next(new ApiError(400, "ID người dùng không hợp lệ"));
         }
 
         // --- KHỞI TẠO SERVICE ĐÚNG CÁCH ---
-        // Bạn phải dùng getDb() giống như hàm borrow() ở trên
+        
         await getClient(); 
         const loanService = new LoanService(getDb()); 
         
-        // --- LOG DEBUG 2: Bắt đầu gọi service ---
-        console.log("2. Bắt đầu gọi loanService.findByReaderId...");
         
         const documents = await loanService.findByReaderId(userId);
 
-        // --- LOG DEBUG 3: Kết quả trả về ---
-        console.log(`3. Tìm thấy ${documents.length} phiếu mượn`);
         
         return res.send(documents);
     } catch (error) {
-        // In lỗi chi tiết ra Terminal để bạn nhìn thấy
-        console.error("❌ LỖI CRASH SERVER:", error);
+       
         return next(new ApiError(500, "Lỗi Server: " + error.message));
     }
 };
@@ -123,11 +112,10 @@ exports.delete = async (req, res, next) => {
         if (!deleted) return next(new ApiError(404, "Không tìm thấy phiếu mượn"));
         return res.send({ message: "Đã hủy phiếu thành công" });
     } catch (error) {
-        console.error("❌ LỖI DELETE:", error);
         return next(new ApiError(500, "Lỗi khi hủy phiếu: " + error.message));
     }
 };
-// 👇 THÊM HÀM NÀY VÀO CUỐI FILE 👇
+
 exports.update = async (req, res, next) => {
     try {
         // 1. Kiểm tra ID hợp lệ
@@ -154,7 +142,6 @@ exports.update = async (req, res, next) => {
 
         return res.send({ message: "Cập nhật thành công", document: updatedDoc });
     } catch (error) {
-        console.error("Lỗi update controller:", error);
         return next(new ApiError(500, "Lỗi khi cập nhật phiếu mượn: " + error.message));
     }
 };

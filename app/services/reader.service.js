@@ -33,7 +33,7 @@ class ReaderService {
       address: payload.address ?? "",
       phone: payload.phone ?? "",
       
-      // 👇 QUAN TRỌNG: Lưu mật khẩu đã mã hóa vào đây
+      // Lưu mật khẩu đã mã hóa vào đây
       passwordHash: passwordHash, 
       
       createdAt: new Date(),

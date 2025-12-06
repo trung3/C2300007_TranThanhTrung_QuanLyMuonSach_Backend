@@ -11,7 +11,7 @@ router.post("/", auth, loanController.borrow);
 // trả sách
 router.patch("/:id/return", auth, loanController.returnBook);
 
-// LẤY TẤT CẢ MƯỢN + TRẢ (QUAN TRỌNG)
+// LẤY TẤT CẢ MƯỢN + TRẢ
 router.get("/", auth, loanController.listAll);
 
 // Lấy lịch sử mượn của riêng một độc giả

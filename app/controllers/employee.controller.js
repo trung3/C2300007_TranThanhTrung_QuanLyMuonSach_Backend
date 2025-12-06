@@ -41,9 +41,7 @@ exports.findOne = async (req, res, next) => {
 
 exports.update = async (req, res, next) => {
   try {
-    // 1. Log ra xem ID gửi lên có đúng không
-    console.log("Update ID:", req.params.id);
-    console.log("Update Body:", req.body);
+
 
     if (!ObjectId.isValid(req.params.id)) {
       return next(new ApiError(400, "ID không hợp lệ"));
@@ -68,16 +66,12 @@ exports.update = async (req, res, next) => {
       { returnDocument: "after", projection: { passwordHash: 0 } } // MongoDB v5+ dùng returnDocument
     );
 
-    // 3. Log kết quả trả về từ DB để kiểm tra
-    console.log("MongoDB Result:", result);
-
-    // --- ĐOẠN CODE "BẤT TỬ" XỬ LÝ MỌI PHIÊN BẢN MONGODB ---
-    // Nếu là Driver cũ, kết quả nằm trong result.value
-    // Nếu là Driver mới, kết quả chính là result
+    
+   
     const updatedDoc = result.value || result; 
     // -----------------------------------------------------
 
-    // Kiểm tra kỹ: Nếu updatedDoc null hoặc (Driver cũ trả về ok=1 nhưng value=null)
+   
     if (!updatedDoc || (result.ok === 1 && !result.value && !result._id)) {
         return next(new ApiError(404, "Không tìm thấy nhân viên trong DB"));
     }

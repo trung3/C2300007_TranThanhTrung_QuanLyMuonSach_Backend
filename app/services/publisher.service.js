@@ -1,6 +1,6 @@
 // app/services/publisher.service.js
 const { ObjectId } = require("mongodb");
-console.log("========= FILE SERVICE DA DUOC LOAD PHIEN BAN MOI NHAT 123 ========="); // <--- THÊM DÒNG NÀY
+
 
 class PublisherService {
   constructor(db) {

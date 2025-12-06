@@ -19,8 +19,8 @@ class EmployeeService {
         fullName, 
         passwordHash, 
         role, 
-        phone,   // <--- Thêm dòng này
-        address, // <--- Thêm dòng này
+        phone,  
+        address, 
         createdAt: new Date() 
     };
     

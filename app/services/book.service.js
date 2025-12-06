@@ -25,7 +25,7 @@ class BookService {
       publisherId: payload.publisherId ? new ObjectId(payload.publisherId) : null,
       language: payload.language ?? "vi",
       yearOfPublication: payload.yearOfPublication ?? "",
-      image: payload.image ?? "",           // ✅ thêm cột hình (URL)
+      image: payload.image ?? "",          
       createdAt: new Date(),
     };
     const { insertedId } = await this.collection.insertOne(doc);
@@ -50,8 +50,7 @@ async update(id, payload) {
     return this.findById(id);
   }
 
-  // debug (tạm)
-  // console.log("BOOK UPDATE filter:", filter, "$set:", $set);
+
 
   const r = await this.collection.updateOne(filter, { $set });
   if (r.matchedCount === 0) return null;        // => 404
